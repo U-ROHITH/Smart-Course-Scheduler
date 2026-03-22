@@ -14,7 +14,7 @@
 <!-- ── Sticky calendar bar (slides in from top once schedule is ready) ───── -->
 <div id="sticky-cal-bar">
   <span class="bar-text" id="bar-text">📅 Your schedule is ready!</span>
-  <a href="{% url 'download_ics' %}" class="bar-btn">⬇ Download .ics</a>
+  <button class="bar-btn" onclick="downloadIcs()">⬇ Download .ics</button>
 </div>
 
 <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
@@ -159,9 +159,9 @@
 
       <!-- Single course-wide calendar export -->
       <div class="timetable-export">
-        <a href="{% url 'download_ics' %}" class="gcal-course-btn">
+        <button class="gcal-course-btn" onclick="downloadIcs()">
           📅 Add Entire Course to Google Calendar
-        </a>
+        </button>
         <span class="export-hint">Downloads a .ics file — works with Google Calendar, Apple Calendar &amp; Outlook</span>
       </div>
     </div>
@@ -174,9 +174,9 @@
     <div class="cal-card">
       <h2>📆 Export to Your Calendar</h2>
       <p>Download a <strong>.ics file</strong> — works with Google Calendar, Apple Calendar, and Outlook. No sign-in needed.</p>
-      <a href="{% url 'download_ics' %}" class="btn btn-success" id="ics-btn">
+      <button class="btn btn-success" id="ics-btn" onclick="downloadIcs()">
         ⬇ Download Calendar File (.ics)
-      </a>
+      </button>
     </div>
 
     <!-- ── Animated import guide ──────────────────────────────────────── -->

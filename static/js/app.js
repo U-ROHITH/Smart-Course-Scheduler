@@ -19,8 +19,11 @@ function updateBehaviour(patch) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let totalVideoSec = 0;   // used for live pace insight
-let videoCount    = 0;
+let totalVideoSec      = 0;    // used for live pace insight
+let videoCount         = 0;
+let currentVideos      = [];   // full video list from last fetchPlaylist response
+let currentPlaylistTitle = ''; // playlist title for ICS generation
+let currentSchedule    = [];   // schedule from last generateSchedule response
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 const $    = id => document.getElementById(id);
@@ -101,8 +104,10 @@ async function fetchPlaylist() {
 
     if (!resp.ok) { showError('fetch-error', data.error || 'Something went wrong.'); return; }
 
-    totalVideoSec = data.total_sec;
-    videoCount    = data.count;
+    totalVideoSec        = data.total_sec;
+    videoCount           = data.count;
+    currentVideos        = data.videos;
+    currentPlaylistTitle = data.title || '';
 
     // Save to behaviour store
     updateBehaviour({
@@ -257,7 +262,8 @@ async function generateSchedule() {
       body: JSON.stringify({
         weekday_hours: weekdayHours,
         weekend_hours: weekendHours,
-        start_date: startDate,
+        start_date:    startDate,
+        videos:        currentVideos,
       }),
     });
     const data = await resp.json();
@@ -273,6 +279,7 @@ async function generateSchedule() {
       lastScheduleDate: today,
     });
 
+    currentSchedule = data.schedule;
     renderTimetable(data.schedule, weekdayHours, weekendHours);
     advanceStepper(2);
     show('timetable-section');
@@ -535,6 +542,43 @@ function showStickyCalBar(schedule) {
   const totalVids = schedule.reduce((s, d) => s + d.videos.length, 0);
   $('bar-text').textContent = `📅 ${totalVids} video${totalVids !== 1 ? 's' : ''} across ${totalDays} day${totalDays !== 1 ? 's' : ''} — ready to export!`;
   bar.classList.add('visible');
+}
+
+// ── ICS download (POST → blob → save) ────────────────────────────────────────
+async function downloadIcs() {
+  if (!currentSchedule.length) {
+    alert('Please generate a schedule first.');
+    return;
+  }
+
+  try {
+    const resp = await fetch('/download-ics/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schedule:       currentSchedule,
+        playlist_title: currentPlaylistTitle,
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      alert(err.error || 'Failed to generate calendar file.');
+      return;
+    }
+
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'study-schedule.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch {
+    alert('Network error — could not download calendar file.');
+  }
 }
 
 // ── Import guide step animations (Intersection Observer) ──────────────────────

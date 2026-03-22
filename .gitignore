@@ -7,3 +7,5 @@ db.sqlite3
 .venv/
 env/
 venv/
+staticfiles/
+staticfiles_build/
