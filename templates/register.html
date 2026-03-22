@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register — Smart Course Scheduler</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body class="auth-page">
+
+<div class="auth-wrap">
+  <div class="auth-logo">📅</div>
+  <h2 class="auth-title">Smart Course Scheduler</h2>
+  <p class="auth-subtitle">Create your account</p>
+
+  <div class="card auth-card">
+    <form method="POST">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors.0 }}</p>
+          {% endif %}
+          {% if field.help_text %}
+            <p class="field-hint">{{ field.help_text }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="btn-primary">Create Account</button>
+    </form>
+
+    <p class="auth-switch">
+      Already have an account? <a href="{% url 'login' %}">Sign in</a>
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

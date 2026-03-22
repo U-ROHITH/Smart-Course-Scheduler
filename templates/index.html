@@ -1,0 +1,337 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Course Scheduler</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+
+<canvas id="confetti-canvas" class="hidden"></canvas>
+
+<!-- ── Sticky calendar bar (slides in from top once schedule is ready) ───── -->
+<div id="sticky-cal-bar">
+  <span class="bar-text" id="bar-text">📅 Your schedule is ready!</span>
+  <a href="{% url 'download_ics' %}" class="bar-btn">⬇ Download .ics</a>
+</div>
+
+<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">✦ Science-backed study planning</div>
+    <h1>Turn playlists into<br><span class="hero-highlight">daily habits</span></h1>
+    <p class="hero-sub">Paste a YouTube playlist. Get a personalised study timetable in seconds.</p>
+
+    <div class="url-bar">
+      <input type="text" id="playlist-url"
+        placeholder="https://www.youtube.com/playlist?list=PL..." />
+      <button id="fetch-btn" onclick="fetchPlaylist()">Analyse →</button>
+    </div>
+
+    <div id="fetch-error" class="alert alert-error hidden" style="max-width:560px;margin:0 auto;"></div>
+    <div id="welcome-chip" class="welcome-chip hidden"></div>
+  </div>
+</section>
+
+<!-- ── Stepper ────────────────────────────────────────────────────────────── -->
+<div class="stepper hidden" id="stepper">
+  <div class="step active" id="step-1">
+    <span class="step-num" id="sn-1">1</span> Playlist
+  </div>
+  <div class="step-sep" id="sep-1"></div>
+  <div class="step" id="step-2">
+    <span class="step-num" id="sn-2">2</span> Schedule
+  </div>
+  <div class="step-sep" id="sep-2"></div>
+  <div class="step" id="step-3">
+    <span class="step-num" id="sn-3">3</span> Calendar
+  </div>
+</div>
+
+<div class="page-wrap">
+
+  <!-- ── Playlist overview ───────────────────────────────────────────────── -->
+  <div class="section hidden" id="playlist-section">
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">📋</span>
+        <span id="playlist-title">Playlist Overview</span>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-row" id="stat-row">
+        <div class="stat-chip">
+          <div class="val" id="stat-videos">—</div>
+          <div class="lbl">Videos</div>
+        </div>
+        <div class="stat-chip amber">
+          <div class="val" id="stat-duration">—</div>
+          <div class="lbl">Total watch time</div>
+        </div>
+        <div class="stat-chip green">
+          <div class="val" id="stat-avg">—</div>
+          <div class="lbl">Avg per video</div>
+        </div>
+      </div>
+
+      <!-- Psychological playlist analysis -->
+      <div class="insight-banner" id="playlist-insight"></div>
+
+      <!-- Video list -->
+      <div class="video-list" id="video-list"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Availability ────────────────────────────────────────────────────── -->
+  <div class="section hidden" id="availability-section">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">⏰</span> How much time can you commit each day?
+      </div>
+
+      <div id="schedule-error" class="alert alert-error hidden"></div>
+
+      <!-- Live pace insight -->
+      <div class="pace-bar" id="pace-bar">
+        Enter your available hours below to see your estimated finish date.
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Weekday hours / day</label>
+          <input type="number" id="weekday-hours" value="1" min="0" max="24" step="0.5"
+            oninput="clampHours(this); updatePaceInsight()" />
+        </div>
+        <div class="field">
+          <label>Weekend hours / day</label>
+          <input type="number" id="weekend-hours" value="2" min="0" max="24" step="0.5"
+            oninput="clampHours(this); updatePaceInsight()" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Start date</label>
+        <input type="date" id="start-date" />
+      </div>
+
+      <button class="btn btn-primary mt-sm" id="schedule-btn" onclick="generateSchedule()">
+        Generate My Schedule →
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Timetable ───────────────────────────────────────────────────────── -->
+  <div class="section hidden" id="timetable-section">
+
+    <!-- Behavior / learner profile panel -->
+    <div class="behavior-panel" id="behavior-panel">
+      <h3>Your Learning Profile</h3>
+      <div class="behavior-grid" id="behavior-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">📅</span> Your Study Timetable
+      </div>
+
+      <!-- Summary stats -->
+      <div class="sched-summary">
+        <div class="stat-chip">
+          <div class="val" id="sum-days">—</div>
+          <div class="lbl">Study days</div>
+        </div>
+        <div class="stat-chip amber">
+          <div class="val" id="sum-vids">—</div>
+          <div class="lbl">Videos</div>
+        </div>
+        <div class="stat-chip green">
+          <div class="val" id="sum-time">—</div>
+          <div class="lbl">Total study time</div>
+        </div>
+      </div>
+
+      <!-- Days grouped by week -->
+      <div id="schedule-body"></div>
+
+      <!-- Single course-wide calendar export -->
+      <div class="timetable-export">
+        <a href="{% url 'download_ics' %}" class="gcal-course-btn">
+          📅 Add Entire Course to Google Calendar
+        </a>
+        <span class="export-hint">Downloads a .ics file — works with Google Calendar, Apple Calendar &amp; Outlook</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Calendar export ──────────────────────────────────────────────── -->
+  <div class="section hidden" id="calendar-section">
+
+    <div class="cal-card">
+      <h2>📆 Export to Your Calendar</h2>
+      <p>Download a <strong>.ics file</strong> — works with Google Calendar, Apple Calendar, and Outlook. No sign-in needed.</p>
+      <a href="{% url 'download_ics' %}" class="btn btn-success" id="ics-btn">
+        ⬇ Download Calendar File (.ics)
+      </a>
+    </div>
+
+    <!-- ── Animated import guide ──────────────────────────────────────── -->
+    <div class="import-guide card" id="import-guide">
+
+      <div class="ig-header">
+        <div class="ig-title-wrap">
+          <span class="ig-badge">Step-by-step</span>
+          <h3>How to add to Google Calendar</h3>
+          <p>Takes under 30 seconds &nbsp;·&nbsp; works on any device</p>
+        </div>
+      </div>
+
+      <div class="ig-steps" id="ig-steps">
+
+        <!-- Step 1 -->
+        <div class="ig-step" data-delay="0">
+          <div class="ig-visual vis-1">
+            <div class="vis-screen">
+              <div class="vis-topbar">
+                <span class="vis-dot r"></span><span class="vis-dot y"></span><span class="vis-dot g"></span>
+              </div>
+              <div class="vis-body">
+                <div class="dl-btn-mock">
+                  <span class="dl-arrow">⬇</span>
+                  <span>.ics</span>
+                </div>
+                <div class="dl-file-mock">
+                  <div class="dl-file-icon">
+                    <div class="file-body"></div>
+                    <div class="file-ear"></div>
+                    <div class="file-label">ICS</div>
+                  </div>
+                  <div class="dl-progress"><div class="dl-progress-fill"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ig-text">
+            <div class="ig-step-num">01</div>
+            <h4>Download the .ics file</h4>
+            <p>Click the green <strong>Download</strong> button above. Your browser saves a file called <code>study-schedule.ics</code>.</p>
+          </div>
+        </div>
+
+        <div class="ig-connector"><div class="ig-line"></div><span class="ig-arrow-tip">›</span></div>
+
+        <!-- Step 2 -->
+        <div class="ig-step" data-delay="120">
+          <div class="ig-visual vis-2">
+            <div class="vis-screen">
+              <div class="vis-topbar">
+                <span class="vis-dot r"></span><span class="vis-dot y"></span><span class="vis-dot g"></span>
+              </div>
+              <div class="vis-body">
+                <div class="vis-urlbar">calendar.google.com</div>
+                <div class="gcal-logo-mock">
+                  <div class="gcal-grid">
+                    <div class="gcal-sq gcal-blue"></div>
+                    <div class="gcal-sq gcal-red"></div>
+                    <div class="gcal-sq gcal-yellow"></div>
+                    <div class="gcal-sq gcal-green"></div>
+                  </div>
+                  <span class="gcal-wordmark">Calendar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ig-text">
+            <div class="ig-step-num">02</div>
+            <h4>Open Google Calendar</h4>
+            <p>Go to <strong>calendar.google.com</strong> in your browser and sign in if needed.</p>
+          </div>
+        </div>
+
+        <div class="ig-connector"><div class="ig-line"></div><span class="ig-arrow-tip">›</span></div>
+
+        <!-- Step 3 -->
+        <div class="ig-step" data-delay="240">
+          <div class="ig-visual vis-3">
+            <div class="vis-screen">
+              <div class="vis-topbar">
+                <span class="vis-dot r"></span><span class="vis-dot y"></span><span class="vis-dot g"></span>
+              </div>
+              <div class="vis-body vis-body-menu">
+                <div class="gear-icon">⚙</div>
+                <div class="dropdown-mock">
+                  <div class="drop-item">Settings</div>
+                  <div class="drop-item">Trash</div>
+                  <div class="drop-item drop-highlighted">
+                    <span class="drop-check">›</span> Import
+                  </div>
+                  <div class="drop-item">Print</div>
+                </div>
+                <div class="cursor-mock" id="cursor-mock"></div>
+              </div>
+            </div>
+          </div>
+          <div class="ig-text">
+            <div class="ig-step-num">03</div>
+            <h4>Click ⚙ → Import</h4>
+            <p>In the top-right corner click the <strong>gear icon ⚙</strong>, then select <strong>"Import"</strong> from the dropdown.</p>
+          </div>
+        </div>
+
+        <div class="ig-connector"><div class="ig-line"></div><span class="ig-arrow-tip">›</span></div>
+
+        <!-- Step 4 -->
+        <div class="ig-step" data-delay="360">
+          <div class="ig-visual vis-4">
+            <div class="vis-screen">
+              <div class="vis-topbar">
+                <span class="vis-dot r"></span><span class="vis-dot y"></span><span class="vis-dot g"></span>
+              </div>
+              <div class="vis-body">
+                <div class="file-picker-mock">
+                  <div class="fpm-header">Select file to import</div>
+                  <div class="fpm-file">
+                    <span class="fpm-icon">📄</span>
+                    <span class="fpm-name">study-schedule.ics</span>
+                  </div>
+                  <div class="fpm-import-btn">Import</div>
+                </div>
+              </div>
+            </div>
+            <!-- Success overlay -->
+            <div class="vis-success-overlay">
+              <svg class="check-svg" viewBox="0 0 52 52">
+                <circle class="check-circle-anim" cx="26" cy="26" r="22"/>
+                <polyline class="check-mark-anim" points="14,27 22,35 38,17"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ig-text">
+            <div class="ig-step-num">04</div>
+            <h4>Select the file &amp; import</h4>
+            <p>Choose <code>study-schedule.ics</code> from your downloads, then click <strong>Import</strong>. All sessions appear instantly! 🎉</p>
+          </div>
+        </div>
+
+      </div><!-- /ig-steps -->
+
+      <!-- Compatibility note -->
+      <div class="ig-compat">
+        <span class="ig-compat-label">Also works with</span>
+        <span class="ig-compat-chip">🍎 Apple Calendar</span>
+        <span class="ig-compat-chip">📧 Outlook</span>
+        <span class="ig-compat-chip">📅 Any .ics-compatible app</span>
+      </div>
+
+    </div><!-- /import-guide -->
+  </div>
+
+</div><!-- /page-wrap -->
+
+<script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

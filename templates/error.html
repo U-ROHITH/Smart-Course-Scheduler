@@ -1,0 +1,20 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Error — Smart Course Scheduler</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+<div class="result-page">
+  <div class="result-card">
+    <div class="icon">❌</div>
+    <h2>Something went wrong</h2>
+    <p>{{ message }}</p>
+    <a href="/" class="back-link">← Go Back</a>
+  </div>
+</div>
+</body>
+</html>

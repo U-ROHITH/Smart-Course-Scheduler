@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Smart Course Scheduler{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+
+<header>
+  <div class="container header-inner">
+    <div>
+      <h1>📅 Smart Course Scheduler</h1>
+      <p>Turn any YouTube playlist into a personalised study timetable</p>
+    </div>
+    {% if user.is_authenticated %}
+    <nav class="header-nav">
+      <span class="nav-user">👤 {{ user.username }}</span>
+      <a href="{% url 'logout' %}" class="nav-link">Logout</a>
+    </nav>
+    {% endif %}
+  </div>
+</header>
+
+<main>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

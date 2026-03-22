@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar Synced — Smart Course Scheduler</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+<div class="result-page">
+  <div class="result-card">
+
+    {% if created == total %}
+      <div class="icon">🎉</div>
+      <h2>You're all set!</h2>
+      <p>
+        Created <strong>{{ created }}</strong> calendar event{{ created|pluralize }}.
+        Open Google Calendar — your study sessions are waiting.
+      </p>
+    {% else %}
+      <div class="icon">⚠️</div>
+      <h2>Partially synced</h2>
+      <p>Created <strong>{{ created }}</strong> of <strong>{{ total }}</strong> events.</p>
+      {% if errors %}
+        <ul class="errors">
+          {% for err in errors %}<li>{{ err }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+
+    <a href="/" class="back-link">← Back to Scheduler</a>
+  </div>
+</div>
+</body>
+</html>
